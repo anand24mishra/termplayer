@@ -4,7 +4,7 @@ const initialState = {
   searchResults: [],
   searchError: null,
   tracks: [],
-  selectedIndex: 0,
+  volume: 50,
 };
 
 function reducer(state = initialState, action) {
@@ -23,6 +23,8 @@ function reducer(state = initialState, action) {
       return { ...state, status: 'LOADING' };
     case 'PLAYBACK_STARTED':
       return { ...state, status: 'PLAYING' };
+    case 'SET_VOLUME':
+      return { ...state, volume: action.payload };
     default:
       return state;
   }

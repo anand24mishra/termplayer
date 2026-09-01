@@ -129,21 +129,21 @@
       fully offline (network disabled), confirm the track now appears and plays from the local list.
 
 ## Phase 5 — Production Hardening (F9, F10, F11, F12, F13)
-- [ ] **T5.1** F9 Volume control: `+`/`-` keybinds, `vlcController.setVolume(pct)` mapping 0–100 to
+- [x] **T5.1** F9 Volume control: `+`/`-` keybinds, `vlcController.setVolume(pct)` mapping 0–100 to
       VLC's 0–320 scale, display current volume in now-playing panel.
       *Depends on:* T1.6.
-- [ ] **T5.2** F10 verify metadata display uses T2.2's tagged fields with correct fallback to
+- [x] **T5.2** F10 verify metadata display uses T2.2's tagged fields with correct fallback to
       filename; add the `(Album)` suffix to the now-playing render when present.
       *Depends on:* T2.2, T1.4.
-- [ ] **T5.3** F11 Wrap `index.js`'s dispatch loop in try/catch using the error classes from T3.3;
+- [x] **T5.3** F11 Wrap `index.js`'s dispatch loop in try/catch using the error classes from T3.3;
       add `src/utils/logger.js` (file-based, `.cache/logs/app.log`); add
       `process.on('uncaughtException', ...)` restoring terminal raw mode before rethrow/exit. ✅
       (test: logger writes expected line format; does not throw if `.cache/logs/` doesn't exist yet)
       *Depends on:* T3.3.
-- [ ] **T5.4** F12 Finish `vlcLocator.js` per-OS fallback paths and actionable error messages exactly
+- [x] **T5.4** F12 Finish `vlcLocator.js` per-OS fallback paths and actionable error messages exactly
       as specified in `architecture.md §9` / `features.md` F12.
       *Depends on:* T1.2.
-- [ ] **T5.5** F13 Finalize `package.json` (`bin`, `files`/`.npmignore`), run `npm pack` locally,
+- [x] **T5.5** F13 Finalize `package.json` (`bin`, `files`/`.npmignore`), run `npm pack` locally,
       install the resulting tarball globally in a scratch directory, and verify `termplayer`
       launches correctly against a `songs/` folder there.
       *Depends on:* everything above.

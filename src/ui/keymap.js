@@ -53,6 +53,24 @@ function handleKeypress(str, key, store, config) {
     } else {
       console.log('Set JAMENDO_CLIENT_ID to enable online search — see README.md');
     }
+    return;
+  }
+
+  // Volume control keys
+  if (str === '+' || str === '=') {
+    const newVol = Math.min(100, (state.volume || 50) + 5);
+    store.dispatch({ type: 'SET_VOLUME', payload: newVol });
+    const { setVolume } = require('../playback/vlcController');
+    setVolume(newVol);
+    return;
+  }
+  
+  if (str === '-') {
+    const newVol = Math.max(0, (state.volume || 50) - 5);
+    store.dispatch({ type: 'SET_VOLUME', payload: newVol });
+    const { setVolume } = require('../playback/vlcController');
+    setVolume(newVol);
+    return;
   }
 }
 

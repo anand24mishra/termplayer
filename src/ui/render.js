@@ -13,7 +13,18 @@ function render(state) {
     console.log('\n[Enter] Play  [Esc] Cancel');
   } else {
     console.log('--- TermPlayer ---');
-    console.log('Press / to search online');
+    console.log(`Volume: ${state.volume || 50}%`);
+    if (state.status === 'PLAYING' || state.status === 'LOADING' || state.status === 'PAUSED') {
+      const track = state.tracks ? state.tracks[state.selectedIndex || 0] : null;
+      if (track) {
+        let display = `${track.title} — ${track.artist || 'Unknown Artist'}`;
+        if (track.album) {
+          display += ` (${track.album})`;
+        }
+        console.log(`Now Playing: ${display} [${state.status}]`);
+      }
+    }
+    console.log('Press / to search online. Press +/- to adjust volume.');
   }
 }
 

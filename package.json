@@ -5,6 +5,10 @@
   "bin": {
     "termplayer": "./bin/termplayer.js"
   },
+  "files": [
+    "bin",
+    "src"
+  ],
   "dependencies": {
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
