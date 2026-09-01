@@ -132,6 +132,3 @@ This project's build spec lives in `docs/`:
 If you're an AI agent implementing or extending this codebase, `architecture.md` and `tasks.md` are
 authoritative for file paths and structure — treat anything not specified there as undefined rather
 than inventing it.
-
-## License
-MIT (or your choice — update this section before publishing).
