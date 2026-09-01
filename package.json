@@ -1,0 +1,13 @@
+{
+  "name": "termplayer",
+  "version": "2.0.0",
+  "type": "commonjs",
+  "bin": {
+    "termplayer": "./bin/termplayer.js"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "music-metadata": "^11.15.0"
+  }
+}
