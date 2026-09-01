@@ -14,7 +14,30 @@ function handleKeypress(str, key, store, config) {
       if (abortController) abortController.abort();
       store.dispatch({ type: 'CANCEL_SEARCH' });
     } else if (key && (key.name === 'return' || key.name === 'enter')) {
-      store.dispatch({ type: 'PLAY_TRACK' });
+      const selectedTrack = state.searchResults[state.selectedIndex || 0];
+      if (selectedTrack) {
+        store.dispatch({ type: 'PLAY_TRACK' });
+        // Kick off track download in background if it's an online stream
+        if (selectedTrack.source === 'online-stream') {
+          const { downloadTrack } = require('../cache/trackCache');
+          const { upsertTrack } = require('../library/libraryIndex');
+          downloadTrack(selectedTrack, config)
+            .then(filePath => {
+              if (filePath) {
+                const newTrack = {
+                  ...selectedTrack,
+                  source: 'online-cached',
+                  filePath,
+                  // T4.2: keep license_ccurl and maybe attribution string (if needed)
+                };
+                upsertTrack(config.cacheDir, newTrack);
+              }
+            })
+            .catch(err => {
+              // Failed to download or save, ignore in background
+            });
+        }
+      }
     } else if (key && key.name === 'backspace') {
       store.dispatch({ type: 'UPDATE_QUERY', payload: state.query.slice(0, -1) });
     } else if (str && str.length === 1) {

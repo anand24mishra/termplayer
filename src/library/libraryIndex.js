@@ -80,4 +80,26 @@ async function loadOrBuildIndex(songsDir, cacheTracksDir) {
   return allTracks;
 }
 
-module.exports = { loadOrBuildIndex, getDirectoryHash };
+async function upsertTrack(cacheTracksDir, newTrack) {
+  const cacheDir = path.dirname(cacheTracksDir);
+  const indexPath = path.join(cacheDir, 'library-index.json');
+  if (fs.existsSync(indexPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+      if (data.version === 1) {
+        const existingIndex = data.tracks.findIndex(t => t.id === newTrack.id);
+        if (existingIndex >= 0) {
+          data.tracks[existingIndex] = newTrack;
+        } else {
+          data.tracks.push(newTrack);
+        }
+        data.tracks.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        fs.writeFileSync(indexPath, JSON.stringify(data, null, 2), 'utf-8');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+}
+
+module.exports = { loadOrBuildIndex, getDirectoryHash, upsertTrack };

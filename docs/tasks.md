@@ -110,7 +110,7 @@
       *Depends on:* T3.4.
 
 ## Phase 4 — Stream-to-Cache (F7, gated by F14 / T0.0)
-- [ ] **T4.1** Implement `src/cache/trackCache.js`: `downloadTrack(track) -> Promise<filePath>` that,
+- [x] **T4.1** Implement `src/cache/trackCache.js`: `downloadTrack(track) -> Promise<filePath>` that,
       before downloading anything, (a) checks `config.trackCachingEnabled` — no-op if `false` — and
       (b) checks the track's `license_ccurl` against the allow-list defined in
       `docs/COMPLIANCE.md` (T0.0) — no-op if not on the allow-list. Only then streams the Jamendo
@@ -119,7 +119,7 @@
       both gates pass; either gate false results in a documented no-op, not a silent download;
       abort/error mid-stream cleans up, does not resolve)
       *Depends on:* T3.2, T0.0.
-- [ ] **T4.2** On successful `PLAY` of an `online-stream` track, kick off `trackCache.downloadTrack`
+- [x] **T4.2** On successful `PLAY` of an `online-stream` track, kick off `trackCache.downloadTrack`
       in the background (do not await before starting playback) — it will itself no-op per T4.1's
       gates when caching isn't permitted for that track/provider. On success, call
       `libraryIndex`'s upsert to persist it as `online-cached` with the real `filePath`,

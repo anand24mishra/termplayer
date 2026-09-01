@@ -26,7 +26,9 @@ async function searchTracks(query, clientId, { signal } = {}) {
       duration: parseInt(track.duration, 10) || 0,
       source: 'online-stream',
       filePath: null,
-      streamUrl: track.audio
+      streamUrl: track.audio,
+      audiodownload: track.audiodownload,
+      license_ccurl: track.license_ccurl
     }));
   } catch (error) {
     if (error.name === 'AbortError') {
