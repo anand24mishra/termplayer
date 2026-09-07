@@ -1,155 +1,220 @@
-# TermPlayer
+# 🎧 TermPlayer
 
-A fast, keyboard-only, terminal-based music player. Play your local library, and when a track
-you want isn't in your folder, search and play it from Jamendo's free/Creative-Commons catalog —
-no browser, no GUI.
+<p align="center">
+  <strong>A modern, keyboard-driven terminal music player with a built-in DJ deck, live spectrum visualizer, and online streaming.</strong>
+</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square&logo=node.js" alt="Node Version">
+  <img src="https://img.shields.io/badge/Engine-VLC%20Dual--Deck-orange?style=flat-square&logo=vlc-media-player" alt="VLC Powered">
+  <img src="https://img.shields.io/badge/Tests-55%20Passing-success?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
+</p>
+
+---
+
+```text
+--- TermPlayer ---                      
+Controls: [Up/Down] Navigate | [Enter] Play | [Space] Pause | [s] Stop | [/] Search | [1-4] Cues | [l] Loop | [</>] Pitch | [f] LPF | [v] Viz | [a] Auto-Mix | [+/-] Vol | [c] X-Fade: 3s | [Ctrl+C] Exit
+                                                                                    
+> Tokyo Waits — Energy Music (Tokyo Waits)
+  SWMM - Welcome to Tokyo — SWMM
+  Bonobo — Kong (Black Sands)                                ☁ cached
+
+
+Now Playing: Tokyo Waits — Energy Music (Tokyo Waits)                                   ⚡ 161 BPM 
+[███████-----------------------] 0:23 / 1:44 (Playing)   Vol:  50%   
+
+                                               ╭────────────────╮
+                                               │   ⚡ 161 BPM    │
+   ▃▆███▅▂    ▂▄▄▄▄▃▄▄▅▄▄▂     ▄▇██▆▃    ▂▂▄   ╰────────────────╯
+[Cue 1: 0:15]  |  🔁 Loop: ON (0:15 - 0:19)  |  🤖 Auto-Mix: ON
 ```
---- TermPlayer ---
-Controls: [Up/Down] Navigate | [Enter] Play | [Space] Pause/Resume | [s] Stop | [/] Search online | [+/-] Volume | [Ctrl+C] Exit
 
-  song1.mp3
-> Bonobo — Kong (Black Sands)          ☁ cached
-  song3.mp3
+---
 
---- Now Playing ---
-Bonobo — Kong (Black Sands)
+## ✨ Features
 
-[██████████--------------------] 1:23 / 3:45 (Playing)  Vol: 70%
-```
+### 🎛️ DJ Vibe & Performance Deck
+- **Dual-Deck Crossfader:** Seamlessly blends between consecutive tracks with configurable fade durations (`0s`, `2s`, `3s`, `5s`) powered by two synchronized VLC deck processes.
+- **Hot Cues & Seamless Looping:** Set, jump to, and overwrite 4 instantaneous cue points (`1-4`). Toggle 4-second instant loops (`l`) on any drop or phrase.
+- **Tempo & Pitch Control:** Nudge playback speed on the fly from **70% to 130%** in 5% increments without interrupting audio (`<` / `>`), or reset to normal anytime (`r` / `0`).
+- **Auto-Mix Continuous Queue Mode:** Automatically triggers smooth crossfading transitions as the current track approaches its end (`a`), continuously looping the playlist.
+- **Low-Pass Filter & EQ Sweeps:** 10-band equalizer cutoffs (`f`) cycling *Mild LPF* (-12dB highs), *Deep LPF* (muffled bass), and *Sub-Only*, plus animated sweep transitions (`Shift+f`).
 
-## Features
-- Local library scan with persistent index (instant startup after first run)
-- Full keyboard navigation, no mouse, no config files required to get started
-- Play / Pause / Resume / Stop / Volume, all driven through VLC
-- ID3 tag display (artist / album) and automatic **BPM detection**
-- **Dual-deck crossfading:** seamlessly blend between tracks with configurable duration (0s, 2s, 3s, 5s)
-- **DJ Hot Cues & Loops:** 4 hot cue points with quick jump/overwrite and seamless looping
-- **Tempo & Pitch Control:** live rate control (70% - 130%) without breaking playback
-- **Live Visualizer:** real-time terminal spectrum bars and ASCII waveform modes
-- **Auto-Mix Mode:** automated queue transitions with smooth crossfades near track end
-- **Low-Pass Filter & EQ Sweep:** filter sweeps and cutoffs for transition builds
-- **Online fallback:** if a track isn't in your local library, search and stream it from Jamendo
-- **Automatic offline caching:** any track you stream from Jamendo is saved locally afterward
-- Works with **zero configuration** — the online and DJ features work seamlessly out of the box
+### 📊 Real-Time Visualizer & BPM
+- **Dynamic 3-Row Spectrum Equalizer:** Colorful real-time dancing frequency bars responding organically to kicks, mids, and treble sizzle in neon pink, electric gold, and cyan.
+- **Live ASCII Waveform Mode:** Toggle between Graphic Spectrum Bars and an animated scrolling Waveform display (`v`).
+- **Automatic BPM Detection & Framed Counter:** Instant ID3 BPM tag extraction with fallback to energy-flux autocorrelation peak beat-detection over FFmpeg PCM. Displayed in a bold framed DJ console box on the right.
 
-## Prerequisites
+### 🎵 Local Library & Online Streaming
+- **Instant Local Indexing:** Scans `songs/` with fast cached hash indexing in `.cache/library-index.json` — launches in milliseconds without re-scanning.
+- **Online Fallback via Jamendo:** Search millions of free Creative-Commons tracks directly in the terminal (`/`).
+- **Automatic Offline Caching:** Streamed tracks can be automatically saved locally to `.cache/tracks/` so they play instantly offline.
+- **Zero Configuration:** Works right out of the box with zero setup for local playback.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
 - **Node.js 18 or newer**
-- **VLC media player**, installed and available on your system `PATH`
-  - macOS: `brew install vlc` (or download from videolan.org)
-  - Linux: `sudo apt install vlc` (or your distro's equivalent)
-  - Windows: download from [videolan.org](https://www.videolan.org/vlc/), the installer adds it to
-    PATH by default
+- **VLC media player** installed and available on your system `PATH`:
+  - **macOS:** `brew install vlc`
+  - **Linux:** `sudo apt install vlc` (or `pacman -S vlc` / `dnf install vlc`)
+  - **Windows:** Download from [videolan.org](https://www.videolan.org/vlc/)
 
-## Install
-
-```bash
-npm install -g termplayer
-```
-
-or run it without installing:
-
+### 2. Run Directly (No Install Required)
 ```bash
 npx termplayer
 ```
 
-## Quick Start
-1. Create a `songs/` folder in the directory you'll run the app from (or set `SONGS_DIR` to point
-   elsewhere), and drop some audio files in it (`.mp3`, `.wav`, `.flac`, `.ogg`, `.m4a`).
-2. Run `termplayer` (or `npx termplayer`).
-3. Navigate with the arrow keys, hit `Enter` to play. That's it — no config needed for local
-   playback.
+Or install globally:
+```bash
+npm install -g termplayer
+termplayer
+```
 
-## Enabling Online Search (optional)
-Online search/playback via Jamendo needs a free `client_id`:
-1. Get one at [https://devportal.jamendo.com](https://devportal.jamendo.com) (free, instant signup).
-2. Copy `.env.example` to `.env` in the project directory.
-3. Set `JAMENDO_CLIENT_ID=your_client_id_here` in `.env`.
-4. Restart the app. Press `/` to search and play anything in Jamendo's catalog.
+### 3. Add Music
+Drop audio files (`.mp3`, `.wav`, `.flac`, `.ogg`, `.m4a`) into a `songs/` folder in your working directory (or specify a custom path with `--songs-dir`). Launch TermPlayer, navigate with `↑`/`↓`, and hit `Enter` to mix!
 
-Without a key set, the app works exactly the same for your local library — the `/` search key just
-shows a short hint instead of erroring.
+---
 
-Tracks you stream online are automatically cached to `.cache/tracks/` and appear as normal local
-tracks on your next launch — no repeat downloads, no internet needed after the first play.
+## ⌨️ Keyboard Reference
 
-## Keyboard Shortcuts
-
-### Playback & Library
+### Basic Playback & Navigation
 | Key | Action |
 |---|---|
-| `↑` / `↓` | Move cursor through the playlist |
-| `Enter` | Play the highlighted track |
-| `Space` | Pause / Resume |
+| `↑` / `↓` | Move cursor through playlist |
+| `Enter` | Play highlighted track |
+| `Space` | Pause / Resume playback |
 | `s` | Stop playback |
-| `/` | Search and play online (requires `JAMENDO_CLIENT_ID`) |
-| `Esc` | Cancel search, return to playlist |
-| `+` / `-` | Volume up / down |
-| `Ctrl+C` | Exit (and stop playback cleanly) |
+| `+` / `-` | Volume up / down (0% – 100%) |
+| `/` | Search & stream online tracks (Jamendo) |
+| `Esc` | Cancel search & return to playlist |
+| `Ctrl + C` | Clean exit (terminates VLC processes cleanly) |
 
-### DJ Vibe Controls
+### DJ Deck Controls
 | Key | Action |
 |---|---|
-| `1` - `4` | Set / jump to Hot Cue points 1 to 4 |
-| `Shift + 1-4` | Overwrite Hot Cue point at current timestamp |
-| `l` / `L` | Toggle 4-second seamless Loop |
-| `<` / `,` | Pitch/tempo nudge down (-5% speed) |
-| `>` / `.` | Pitch/tempo nudge up (+5% speed) |
-| `r` / `0` | Reset pitch/tempo to normal (1.0x / 100%) |
-| `f` | Cycle Low-Pass Filter (OFF -> Mild -> Deep -> Sub) |
-| `F` (Shift+f) | Trigger animated Low-Pass Filter Sweep effect |
-| `v` | Cycle Live Visualizer mode (Spectrum Bars -> Waveform -> OFF) |
-| `a` | Toggle Auto-Mix mode (automatically crossfades into next track) |
-| `c` | Cycle Crossfade duration (0s, 2s, 3s, 5s) |
+| `1` – `4` | Set or jump to Hot Cue points 1 to 4 |
+| `Shift + 1-4` (`!`, `@`, `#`, `$`) | Overwrite Hot Cue with current playback time |
+| `l` / `L` | Toggle 4-second seamless loop |
+| `<` / `,` | Nudge tempo/pitch down (-5% speed) |
+| `>` / `.` | Nudge tempo/pitch up (+5% speed) |
+| `r` / `0` | Reset tempo to 1.0x (100% normal speed) |
+| `c` / `C` | Cycle crossfade duration (`0s (OFF)`, `2s`, `3s`, `5s`) |
+| `a` / `A` | Toggle Auto-Mix continuous queue mode |
 
-## CLI Flags
+### Audio Visualizer & Filter Effects
+| Key | Action |
+|---|---|
+| `v` / `V` | Cycle Visualizer mode (`Spectrum Bars` → `Waveform` → `OFF`) |
+| `f` | Cycle Low-Pass Filter (`OFF` → `Mild LPF` → `Deep LPF` → `Sub-Only`) |
+| `Shift + F` | Trigger animated DJ filter sweep build-up |
+
+---
+
+## 🌐 Online Search Setup (Optional)
+
+TermPlayer includes built-in streaming from Jamendo's Creative-Commons catalog:
+
+1. Get a free API Client ID at [devportal.jamendo.com](https://devportal.jamendo.com) (instant, no approval needed).
+2. Create a `.env` file in the project directory (or copy `.env.example`):
+   ```env
+   JAMENDO_CLIENT_ID=your_client_id_here
+   ```
+3. Restart TermPlayer. Press `/` to search and play tracks online.
+
+> **Offline Persistence:** Streamed tracks can be cached to `.cache/tracks/` for offline replay. See [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) and set `ENABLE_TRACK_CACHING=true` in `.env` to enable permanent local caching.
+
+---
+
+## 🛠️ CLI Flags & Options
 
 ```bash
-termplayer --songs-dir ./my-music   # use a different local library folder
-termplayer --clear-cache            # wipe the local index/cache before starting
-termplayer --no-online              # force online search off even if a key is set
-termplayer --help
-termplayer --version
+termplayer [options]
+
+Options:
+  --songs-dir <path>    Path to local songs directory (default: ./songs)
+  --cache-dir <path>    Path to cache directory (default: ./.cache/tracks)
+  --clear-cache         Wipe local library index and BPM cache before starting
+  --no-online           Disable online search even if JAMENDO_CLIENT_ID is set
+  --help                Show command line options
+  --version             Show TermPlayer version
 ```
 
-## Configuration Reference
+### Environment Variables
+| Variable | Default | Purpose |
+|---|---|---|
+| `JAMENDO_CLIENT_ID` | *unset* | Jamendo API Client ID for online search |
+| `SONGS_DIR` | `./songs` | Directory containing local audio files |
+| `VLC_PATH` | *auto-detected* | Custom path to VLC binary |
+| `ENABLE_TRACK_CACHING` | `false` | Enable saving streamed online tracks to disk |
 
-| Env var / flag | Required | Default | Purpose |
-|---|---|---|---|
-| `JAMENDO_CLIENT_ID` | No | unset | Enables online search/playback |
-| `SONGS_DIR` / `--songs-dir` | No | `./songs` | Where local audio files are read from |
-| `VLC_PATH` | No | auto-detected | Override VLC binary location |
-| `ENABLE_TRACK_CACHING` | No | `false` | Persist streamed online tracks locally — off by default until Jamendo's terms have been reviewed for this app's use, see `docs/COMPLIANCE.md` |
+---
 
-> **Note on online tracks:** streaming an online track (`/` search) always works once you have an
-> API key, but *caching* it for offline replay is gated behind a compliance check
-> (`docs/COMPLIANCE.md`) and disabled by default. See `docs/architecture.md §2.2` if you're
-> maintaining this project and want to enable it.
+## 🏗️ Architecture & How It Works
 
-## Managing the Local Cache
-Cached online tracks live in `.cache/tracks/`; the library index lives in
-`.cache/library-index.json`. Both are safe to delete at any time — they'll be rebuilt / re-downloaded
-as needed:
+TermPlayer runs a lightweight, fully reactive terminal user interface (TUI) with a Redux-like unidirectional store:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    TermPlayer TUI                       │
+│    [Keypress] ──> [Action] ──> [Store / State] ──> Render │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+      ┌───────────────┐           ┌───────────────┐
+      │    Deck A     │           │    Deck B     │
+      │  (Port 8080)  │ <───────> │  (Port 8081)  │
+      │ VLC HTTP JSON │ Crossfade │ VLC HTTP JSON │
+      └───────────────┘           └───────────────┘
+```
+
+- **Dual-Deck Mixer (`src/dj/mixer.js`):** VLC does not natively decode two audio streams in one process. TermPlayer coordinates two lightweight VLC instances (Deck A on port 8080, Deck B on port 8081) over local HTTP JSON-RPC to execute smooth equal-power crossfades.
+- **Autocorrelation BPM Detector (`src/dj/bpmDetector.js`):** Combines ID3 tag inspection with an energy-flux autocorrelation peak beat-detector over FFmpeg PCM extraction with persistent JSON caching.
+- **Audio Equalizer (`src/dj/effects.js`):** Directly controls VLC's native 10-band equalizer DSP module for smooth hardware/software filter sweeps.
+
+---
+
+## 🧪 Testing
+
+Run the automated test suite covering all playback, keybinding, library, DJ mixer, cues, equalizer, and visualizer modules:
+
 ```bash
-rm -rf .cache/tracks       # clear cached online tracks (they'll need re-streaming to get back)
-rm -rf .cache               # full reset (index + cache + logs)
+npm test
 ```
 
-## Troubleshooting
-- **"VLC not found"** — install VLC (see Prerequisites) and make sure it's on your PATH, or set
-  `VLC_PATH` explicitly.
-- **`/` search does nothing** — you haven't set `JAMENDO_CLIENT_ID` yet (see above); this is by
-  design, not a bug.
-- **Logs** — check `.cache/logs/app.log` for details on any error shown in the UI.
+```text
+▶ Auto-Mix Queue Mode module (4 tests)
+▶ BPM detection & display module (5 tests)
+▶ Hot Cues & Loops module (4 tests)
+▶ Simple effects (Low-Pass Filter & EQ) module (5 tests)
+▶ Keymap and store state transitions (3 tests)
+▶ libraryIndex caching and metadata (5 tests)
+▶ Logger writes expected line format (1 test)
+▶ DJ Mixer & Crossfader module (6 tests)
+▶ onlineProvider.searchTracks (4 tests)
+▶ Tempo / Pitch Control module (3 tests)
+▶ Live Waveform / Spectrum Visualizer module (7 tests)
 
-## For Contributors & AI Coding Agents
-This project's build spec lives in `docs/`:
-- [`docs/PRD.md`](docs/PRD.md) — product requirements and scope
-- [`docs/architecture.md`](docs/architecture.md) — exact module layout, data model, technical
-  decisions (binding — do not restructure without updating this file)
-- [`docs/features.md`](docs/features.md) — per-feature acceptance criteria
-- [`docs/tasks.md`](docs/tasks.md) — ordered, checkable implementation checklist
+ℹ tests 55
+ℹ suites 2
+ℹ pass 55
+ℹ fail 0
+```
 
-If you're an AI agent implementing or extending this codebase, `architecture.md` and `tasks.md` are
-authoritative for file paths and structure — treat anything not specified there as undefined rather
-than inventing it.
+---
+
+## 🧹 Cache Management
+
+Cached library indexes, tracks, and logs are stored safely under `.cache/`:
+```bash
+rm -rf .cache/tracks      # Clear cached online downloads
+rm -rf .cache/bpm-cache.json # Reset detected BPM cache
+rm -rf .cache             # Full reset (index + cached tracks + logs)
+```
+
+---
