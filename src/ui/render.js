@@ -14,7 +14,9 @@ function render(state) {
     console.log('\n[Enter] Play  [Esc] Cancel');
   } else {
     console.log('--- TermPlayer ---');
-    console.log(`Controls: [Up/Down] Navigate | [Enter] Play | [Space] Pause/Resume | [s] Stop | [/] Search online | [+/-] Volume | [Ctrl+C] Exit\n`);
+    const xfadeSec = state.crossfadeDuration !== undefined ? state.crossfadeDuration : 3;
+    const xfadeStatus = xfadeSec > 0 ? `[c] X-Fade: ${xfadeSec}s` : '[c] X-Fade: OFF';
+    console.log(`Controls: [Up/Down] Navigate | [Enter] Play | [Space] Pause | [s] Stop | [/] Search | [1-4] Cues | [l] Loop | [</>] Pitch | [f] LPF | [v] Viz | [a] Auto-Mix | [+/-] Vol | ${xfadeStatus} | [Ctrl+C] Exit\n`);
     
     if (state.tracks && state.tracks.length > 0) {
       state.tracks.forEach((track, i) => {
@@ -58,8 +60,43 @@ function render(state) {
       const bar = '[' + '█'.repeat(filled) + '-'.repeat(barLen - filled) + ']';
       
       const statusStr = state.status === 'PLAYING' ? '(Playing)' : state.status === 'LOADING' ? '(Loading...)' : state.status === 'PAUSED' ? '(Paused)' : '(Stopped)';
-      console.log(`\nNow Playing: ${trackName}`);
-      console.log(`${bar} ${formatTime(t)} / ${formatTime(l)} ${statusStr}   Vol: ${volStr}%`);
+      const ratePct = Math.round((state.playbackRate !== undefined ? state.playbackRate : 1.0) * 100);
+      const rateStr = ratePct !== 100 ? `  Speed: ${ratePct}%` : '';
+
+      const termCols = (process.stdout && process.stdout.columns) ? process.stdout.columns : 80;
+      let bpmBadge = '';
+      if (currentTrack && currentTrack.bpm) {
+        bpmBadge = `\x1b[1;38;5;201m⚡ \x1b[1;38;5;226m${currentTrack.bpm} BPM\x1b[0m`;
+      }
+      const nowPlayingLeft = `Now Playing: ${trackName}`;
+      const visibleBpmLen = (currentTrack && currentTrack.bpm) ? `${currentTrack.bpm} BPM   `.length : 0;
+      const padLen = Math.max(2, termCols - nowPlayingLeft.length - visibleBpmLen);
+
+      console.log(`\n${nowPlayingLeft}${' '.repeat(padLen)}${bpmBadge}`);
+      console.log(`${bar} ${formatTime(t)} / ${formatTime(l)} ${statusStr}   Vol: ${volStr}%${rateStr}`);
+
+      const { renderVisualizer } = require('../dj/visualizer');
+      const vizBlock = renderVisualizer(state);
+      if (vizBlock) {
+        console.log(`\n${vizBlock}`);
+      }
+
+      const activeCues = [];
+      if (state.cues) {
+        for (let i = 1; i <= 4; i++) {
+          if (state.cues[i] !== null && state.cues[i] !== undefined) {
+            activeCues.push(`[Cue ${i}: ${formatTime(state.cues[i])}]`);
+          }
+        }
+      }
+      const cuesDisplay = activeCues.length > 0 ? activeCues.join(' ') : '';
+      const loopDisplay = state.loopActive ? `🔁 Loop: ON (${formatTime(state.loopStart || 0)} - ${formatTime(state.loopEnd || 0)})` : '';
+      const autoMixDisplay = state.autoMix ? '🤖 Auto-Mix: ON' : '';
+      const filterDisplay = (state.filterMode && state.filterMode !== 'off') ? `🎛️ Filter: ${state.filterMode.toUpperCase()}` : '';
+      const djInfo = [cuesDisplay, loopDisplay, filterDisplay, autoMixDisplay].filter(Boolean).join('  |  ');
+      if (djInfo) {
+        console.log(`${djInfo}`);
+      }
     }
 
     if (state.flashMessage) {

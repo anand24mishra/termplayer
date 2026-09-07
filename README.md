@@ -22,11 +22,16 @@ Bonobo — Kong (Black Sands)
 - Local library scan with persistent index (instant startup after first run)
 - Full keyboard navigation, no mouse, no config files required to get started
 - Play / Pause / Resume / Stop / Volume, all driven through VLC
-- ID3 tag display (artist / album) when available
+- ID3 tag display (artist / album) and automatic **BPM detection**
+- **Dual-deck crossfading:** seamlessly blend between tracks with configurable duration (0s, 2s, 3s, 5s)
+- **DJ Hot Cues & Loops:** 4 hot cue points with quick jump/overwrite and seamless looping
+- **Tempo & Pitch Control:** live rate control (70% - 130%) without breaking playback
+- **Live Visualizer:** real-time terminal spectrum bars and ASCII waveform modes
+- **Auto-Mix Mode:** automated queue transitions with smooth crossfades near track end
+- **Low-Pass Filter & EQ Sweep:** filter sweeps and cutoffs for transition builds
 - **Online fallback:** if a track isn't in your local library, search and stream it from Jamendo
-- **Automatic offline caching:** any track you stream from Jamendo is saved locally afterward, so
-  it plays with zero internet the next time
-- Works with **zero configuration** — the online features are entirely optional
+- **Automatic offline caching:** any track you stream from Jamendo is saved locally afterward
+- Works with **zero configuration** — the online and DJ features work seamlessly out of the box
 
 ## Prerequisites
 - **Node.js 18 or newer**
@@ -70,6 +75,7 @@ tracks on your next launch — no repeat downloads, no internet needed after the
 
 ## Keyboard Shortcuts
 
+### Playback & Library
 | Key | Action |
 |---|---|
 | `↑` / `↓` | Move cursor through the playlist |
@@ -80,6 +86,21 @@ tracks on your next launch — no repeat downloads, no internet needed after the
 | `Esc` | Cancel search, return to playlist |
 | `+` / `-` | Volume up / down |
 | `Ctrl+C` | Exit (and stop playback cleanly) |
+
+### DJ Vibe Controls
+| Key | Action |
+|---|---|
+| `1` - `4` | Set / jump to Hot Cue points 1 to 4 |
+| `Shift + 1-4` | Overwrite Hot Cue point at current timestamp |
+| `l` / `L` | Toggle 4-second seamless Loop |
+| `<` / `,` | Pitch/tempo nudge down (-5% speed) |
+| `>` / `.` | Pitch/tempo nudge up (+5% speed) |
+| `r` / `0` | Reset pitch/tempo to normal (1.0x / 100%) |
+| `f` | Cycle Low-Pass Filter (OFF -> Mild -> Deep -> Sub) |
+| `F` (Shift+f) | Trigger animated Low-Pass Filter Sweep effect |
+| `v` | Cycle Live Visualizer mode (Spectrum Bars -> Waveform -> OFF) |
+| `a` | Toggle Auto-Mix mode (automatically crossfades into next track) |
+| `c` | Cycle Crossfade duration (0s, 2s, 3s, 5s) |
 
 ## CLI Flags
 

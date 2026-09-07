@@ -1,6 +1,21 @@
 const { searchTracks } = require('../library/onlineProvider');
+const { detectBpm } = require('../dj/bpmDetector');
+const { defaultCueController } = require('../dj/cueController');
 
 let abortController = null;
+
+function startBpmDetection(track, store) {
+  if (!track) return;
+  detectBpm(track)
+    .then(bpm => {
+      if (bpm) {
+        store.dispatch({ type: 'SET_BPM', payload: bpm });
+        const { render } = require('./render');
+        render(store.getState());
+      }
+    })
+    .catch(() => {});
+}
 
 function handleKeypress(str, key, store, config) {
   const state = store.getState();
@@ -30,7 +45,9 @@ function handleKeypress(str, key, store, config) {
     } else if (key && (key.name === 'return' || key.name === 'enter')) {
       const selectedTrack = state.searchResults[state.selectedIndex || 0];
       if (selectedTrack) {
+        defaultCueController.reset();
         store.dispatch({ type: 'PLAY_TRACK', payload: selectedTrack });
+        startBpmDetection(selectedTrack, store);
         const { play } = require('../playback/vlcController');
         play(selectedTrack.filePath || selectedTrack.streamUrl);
         // Kick off track download in background if it's an online stream
@@ -89,7 +106,9 @@ function handleKeypress(str, key, store, config) {
   if (key && (key.name === 'return' || key.name === 'enter')) {
     const selectedTrack = state.tracks[state.selectedIndex || 0];
     if (selectedTrack) {
+      defaultCueController.reset();
       store.dispatch({ type: 'PLAY_TRACK', payload: selectedTrack });
+      startBpmDetection(selectedTrack, store);
       const { play } = require('../playback/vlcController');
       play(selectedTrack.filePath || selectedTrack.streamUrl);
     }
@@ -131,6 +150,148 @@ function handleKeypress(str, key, store, config) {
     setVolume(newVol);
     return;
   }
+
+  // Crossfade toggle key
+  if (str === 'c' || str === 'C') {
+    const durations = [0, 2, 3, 5];
+    const current = state.crossfadeDuration !== undefined ? state.crossfadeDuration : 3;
+    const currentIdx = durations.indexOf(current);
+    const nextIdx = (currentIdx + 1) % durations.length;
+    const nextDuration = durations[nextIdx >= 0 ? nextIdx : 0];
+
+    store.dispatch({ type: 'SET_CROSSFADE', payload: nextDuration });
+    const { setCrossfadeDuration } = require('../playback/vlcController');
+    setCrossfadeDuration(nextDuration);
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: nextDuration > 0 ? `Crossfade set to ${nextDuration}s` : 'Crossfade: OFF'
+    });
+    return;
+  }
+
+  // Hot Cues (1-4 to set/jump, Shift+1-4 to overwrite)
+  const cueMap = { '1': 1, '2': 2, '3': 3, '4': 4, '!': 1, '@': 2, '#': 3, '$': 4 };
+  if (str && cueMap[str]) {
+    const num = cueMap[str];
+    const isOverwrite = ['!', '@', '#', '$'].includes(str);
+    const { defaultMixer } = require('../dj/mixer');
+    const curTime = (state.progress && state.progress.time) ? state.progress.time : 0;
+    const result = defaultCueController.handleCueKey(num, curTime, defaultMixer, isOverwrite);
+    if (result) {
+      if (result.action === 'SET') {
+        store.dispatch({ type: 'SET_CUE', payload: { num: result.num, time: result.time } });
+        store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `Cue ${result.num} set to ${result.formatted}` });
+      } else if (result.action === 'JUMP') {
+        store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `Jumped to Cue ${result.num} (${result.formatted})` });
+      }
+    }
+    return;
+  }
+
+  // Loop toggle [l]
+  if (str === 'l' || str === 'L') {
+    const curTime = (state.progress && state.progress.time) ? state.progress.time : 0;
+    const loopRes = defaultCueController.toggleLoop(curTime);
+    store.dispatch({
+      type: 'SET_LOOP',
+      payload: { active: loopRes.active, start: loopRes.start, end: loopRes.end }
+    });
+    if (loopRes.active) {
+      store.dispatch({
+        type: 'SET_FLASH_MESSAGE',
+        payload: `Loop: ON (${loopRes.startFormatted} - ${loopRes.endFormatted})`
+      });
+    } else {
+      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: 'Loop: OFF' });
+    }
+    return;
+  }
+
+  // Tempo / Speed nudge keys (< or , for -5%, > or . for +5%, r or 0 to reset)
+  if (str === '<' || str === ',' || str === '>' || str === '.' || str === 'r' || str === 'R' || str === '0') {
+    const currentRate = state.playbackRate !== undefined ? state.playbackRate : 1.0;
+    let newRate = currentRate;
+    if (str === '<' || str === ',') {
+      newRate = Math.max(0.70, Math.round((currentRate - 0.05) * 100) / 100);
+    } else if (str === '>' || str === '.') {
+      newRate = Math.min(1.30, Math.round((currentRate + 0.05) * 100) / 100);
+    } else if (str === 'r' || str === 'R' || str === '0') {
+      newRate = 1.0;
+    }
+
+    store.dispatch({ type: 'SET_RATE', payload: newRate });
+    const { setRate } = require('../playback/vlcController');
+    setRate(newRate);
+
+    const pct = Math.round(newRate * 100);
+    const diff = pct - 100;
+    const diffStr = diff > 0 ? ` (+${diff}%)` : diff < 0 ? ` (${diff}%)` : ' (Normal)';
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: `Tempo: ${pct}%${diffStr}`
+    });
+    return;
+  }
+
+  // Visualizer mode toggle [v]
+  if (str === 'v' || str === 'V') {
+    const modes = ['bars', 'waveform', 'off'];
+    const curMode = state.visualizerMode || 'bars';
+    const nextIdx = (modes.indexOf(curMode) + 1) % modes.length;
+    const nextMode = modes[nextIdx >= 0 ? nextIdx : 0];
+
+    store.dispatch({ type: 'SET_VISUALIZER_MODE', payload: nextMode });
+    const label = nextMode === 'bars' ? 'Spectrum Bars' : nextMode === 'waveform' ? 'Waveform' : 'OFF';
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: `Visualizer: ${label}`
+    });
+    return;
+  }
+
+  // Auto-mix queue mode toggle [a]
+  if (str === 'a' || str === 'A') {
+    const newAutoMix = !state.autoMix;
+    store.dispatch({ type: 'SET_AUTO_MIX', payload: newAutoMix });
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: newAutoMix ? 'Auto-Mix: ON (Continuous Queue)' : 'Auto-Mix: OFF'
+    });
+    return;
+  }
+
+  // Filter / Low-pass effect [f] (cycle modes) or [F] (trigger sweep)
+  if (str === 'f') {
+    const { defaultEffectsController } = require('../dj/effects');
+    const { defaultMixer } = require('../dj/mixer');
+    const mode = defaultEffectsController.cycleFilter(defaultMixer);
+    store.dispatch({ type: 'SET_FILTER_MODE', payload: mode.id });
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: `Filter: ${mode.label}`
+    });
+    return;
+  }
+
+  if (str === 'F') {
+    const { defaultEffectsController } = require('../dj/effects');
+    const { defaultMixer } = require('../dj/mixer');
+    const { render } = require('./render');
+    store.dispatch({
+      type: 'SET_FLASH_MESSAGE',
+      payload: 'Filter: Sweeping LPF...'
+    });
+    defaultEffectsController.sweepFilter(defaultMixer, (step) => {
+      store.dispatch({ type: 'SET_FILTER_MODE', payload: step.id });
+      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `Filter Sweep: ${step.label}` });
+      render(store.getState());
+    }).then(() => {
+      store.dispatch({ type: 'SET_FILTER_MODE', payload: 'off' });
+      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: 'Filter Sweep: Done (Flat)' });
+      render(store.getState());
+    });
+    return;
+  }
 }
 
 async function triggerSearch(query, store, config) {
@@ -152,4 +313,4 @@ async function triggerSearch(query, store, config) {
   }
 }
 
-module.exports = { handleKeypress };
+module.exports = { handleKeypress, startBpmDetection };

@@ -59,6 +59,26 @@ module.exports = async function start(cliOptions) {
       } else if (status.state === 'stopped' && currentStatus !== 'IDLE' && currentStatus !== 'SEARCHING') {
         store.dispatch({ type: 'STOP_TRACK' });
       }
+
+      const { defaultCueController } = require('./dj/cueController');
+      const { defaultMixer } = require('./dj/mixer');
+      defaultCueController.checkLoop(status.time, defaultMixer);
+
+      const { defaultAutoMixer } = require('./dj/autoMixer');
+      defaultAutoMixer.checkAutoMix(status, store.getState(), (nextTrack, nextIndex) => {
+        const { play } = require('./playback/vlcController');
+        const { startBpmDetection } = require('./ui/keymap');
+        defaultCueController.reset();
+        store.dispatch({ type: 'SELECT_TRACK', payload: nextIndex });
+        store.dispatch({ type: 'PLAY_TRACK', payload: nextTrack });
+        store.dispatch({
+          type: 'SET_FLASH_MESSAGE',
+          payload: `Auto-mixing into: ${nextTrack.title || nextTrack.filename || 'Next Track'}`
+        });
+        startBpmDetection(nextTrack, store);
+        play(nextTrack.filePath || nextTrack.streamUrl);
+      });
+
       render(store.getState());
     });
 

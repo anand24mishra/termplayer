@@ -164,3 +164,64 @@ assumption made once at design time.
       package.
 - [ ] `README.md` install section is verified against a clean `npm pack` + local install, not just
       described from memory.
+
+---
+
+## DJ1 (F15) — BPM Detection & Display
+**Description:** Detect track BPM via ID3 tags, Python aubio/librosa, or energy-flux autocorrelation peak beat-detection over FFmpeg PCM extraction, caching results in `.cache/bpm-cache.json`.
+**Acceptance criteria:**
+- [x] Extracts ID3 `TBPM` tag first if present.
+- [x] Falls back to external/built-in PCM energy-flux autocorrelation beat detector.
+- [x] Renders BPM next to Now Playing (e.g. `[120 BPM]`).
+- [x] Never crashes or blocks UI if detection fails or external tools are absent.
+
+## DJ2 (F16) — Dual-Deck Crossfading
+**Description:** Smoothly blend between tracks using a dual-deck architecture (Deck A and Deck B on ports 8080/8081).
+**Keybind:** `c` cycles crossfade durations (0s, 2s, 3s, 5s).
+**Acceptance criteria:**
+- [x] Active deck ramps volume down while incoming deck starts at 0 and ramps up.
+- [x] Outgoing deck process is killed cleanly when fade completes.
+- [x] Duration is configurable and can be toggled to OFF (0s).
+
+## DJ3 (F17) — Hot Cues & Loops
+**Description:** Set and jump to 4 hot cue points with quick jump and overwrite, plus seamless 4s loop toggling.
+**Keybinds:** `1-4` set/jump cues, `Shift+1-4` (`!`, `@`, `#`, `$`) overwrite cues, `l` toggle loop.
+**Acceptance criteria:**
+- [x] Pressing an unset cue sets it at current playback time.
+- [x] Pressing a set cue jumps playback to that time.
+- [x] Pressing `Shift+1-4` overwrites cue with current position.
+- [x] Pressing `l` toggles a loop window; playback seeks back to loopStart upon hitting loopEnd.
+
+## DJ4 (F18) — Tempo / Pitch Control
+**Description:** Nudge playback speed in 5% increments without interrupting audio.
+**Keybinds:** `<` / `,` decrease speed (-5%), `>` / `.` increase speed (+5%), `r` / `0` reset to 100%.
+**Acceptance criteria:**
+- [x] Adjusts VLC playback rate between 0.70x and 1.30x.
+- [x] Renders current speed in now-playing bar when modified.
+- [x] Resets to 1.0x on new track play or when reset key is pressed.
+
+## DJ5 (F19) — Live Waveform / Spectrum Visualizer
+**Description:** Real-time audio spectrum bars and ASCII waveform visualization reacting to time, tempo, and volume.
+**Keybind:** `v` cycles modes: Spectrum Bars -> Waveform -> OFF.
+**Acceptance criteria:**
+- [x] Generates dynamic Unicode bars (` `, `▂`, `▃`, `▄`, `▅`, `▆`, `▇`, `█`) or waveform (`_.-~=#@`).
+- [x] Reacts to playback state (frozen/flat when paused or stopped).
+- [x] Supports full toggle off for minimal terminal usage.
+
+## DJ6 (F20) — Auto-Mix Queue Mode
+**Description:** Automatically transition and crossfade to the next track in the playlist when nearing the end of the current track.
+**Keybind:** `a` toggles Auto-Mix mode on/off.
+**Acceptance criteria:**
+- [x] Calculates remaining time against crossfade duration threshold.
+- [x] Advances queue to next track (wrapping to start at playlist end).
+- [x] Triggers crossfade and BPM detection seamlessly without stopping playback.
+- [x] Prevents duplicate transitions on the same track.
+
+## DJ7 (F21) — Simple Effects / Low-Pass Filter Sweep
+**Description:** Audio filter effect using VLC's 10-band equalizer to attenuate high frequencies for DJ drops and transitions.
+**Keybinds:** `f` cycles filter modes (OFF -> Mild -> Deep -> Sub), `F` triggers animated filter sweep.
+**Acceptance criteria:**
+- [x] Spawns VLC with `--audio-filter equalizer` enabled.
+- [x] Applies high-frequency rolloff to equalizer bands 4-9 via VLC HTTP interface.
+- [x] `F` executes multi-step filter sweep down and back up.
+- [x] Resets filter to flat/off on new track selection.
