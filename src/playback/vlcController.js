@@ -1,38 +1,101 @@
 const { locateVlc } = require('./vlcLocator');
 const { spawn } = require('child_process');
+const http = require('http');
 
 let vlcProcess = null;
 let currentVolume = 50;
+let statusInterval = null;
+let statusCallback = null;
+
+function vlcRequest(command, value = null) {
+  let url = 'http://:termplayer@localhost:8080/requests/status.json';
+  if (command) {
+    url += `?command=${command}`;
+    if (value !== null) url += `&val=${value}`;
+  }
+  
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch(e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+  });
+}
+
+function startPolling() {
+  if (statusInterval) clearInterval(statusInterval);
+  statusInterval = setInterval(async () => {
+    try {
+      const status = await vlcRequest();
+      if (statusCallback) {
+        statusCallback({
+          state: status.state,
+          time: status.time,
+          length: status.length,
+          volume: status.volume
+        });
+      }
+    } catch(err) {
+      // Ignore errors if VLC is shutting down or unresponsive briefly
+    }
+  }, 1000);
+  if (statusInterval.unref) {
+    statusInterval.unref();
+  }
+}
 
 function play(pathOrUrl) {
   if (vlcProcess) stop();
   const vlcPath = locateVlc();
-  // Using dummy args for now, just to show structure
-  vlcProcess = spawn(vlcPath, ['-I', 'dummy', '--no-video', pathOrUrl]);
-  setVolume(currentVolume);
+  vlcProcess = spawn(vlcPath, [
+    '-I', 'dummy', 
+    '--extraintf', 'http', 
+    '--http-password', 'termplayer', 
+    '--http-port', '8080', 
+    '--no-video', 
+    pathOrUrl
+  ]);
+  
+  // Wait a short moment for VLC HTTP server to spin up before setting volume
+  setTimeout(() => {
+    setVolume(currentVolume);
+    startPolling();
+  }, 500);
 }
 
-function pause() { /* no-op for now */ }
-function resume() { /* no-op for now */ }
+function pause() {
+  vlcRequest('pl_pause').catch(() => {});
+}
+
+function resume() {
+  vlcRequest('pl_pause').catch(() => {}); // pl_pause toggles play/pause
+}
+
 function stop() {
+  if (statusInterval) {
+    clearInterval(statusInterval);
+    statusInterval = null;
+  }
   if (vlcProcess) {
-    vlcProcess.kill();
+    try {
+      vlcProcess.kill('SIGKILL');
+    } catch(e) {}
     vlcProcess = null;
   }
 }
 
 function setVolume(pct) {
-  // Map 0-100 to VLC's 0-320
   currentVolume = Math.max(0, Math.min(100, pct));
   const vlcVol = Math.floor((currentVolume / 100) * 320);
-  
-  // In a real implementation this would write 'volume [vlcVol]' to VLC's stdin or rc interface.
-  // We'll simulate it here to pass T5.1 requirements.
-  if (vlcProcess && vlcProcess.stdin) {
-    try {
-      vlcProcess.stdin.write(`volume ${vlcVol}\n`);
-    } catch(e) {}
-  }
+  vlcRequest('volume', vlcVol).catch(() => {});
 }
 
 function getVolume() {
@@ -40,7 +103,7 @@ function getVolume() {
 }
 
 function onStatus(cb) {
-  // no-op
+  statusCallback = cb;
 }
 
 module.exports = { play, pause, resume, stop, setVolume, getVolume, onStatus };
