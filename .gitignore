@@ -4,6 +4,5 @@ node_modules/
 *.tgz
 test/scratch/
 
-.claude/
 .DS_Store
 *.log
