@@ -33,6 +33,17 @@ A keyboard-driven music player for your terminal. Play local files, stream Bolly
 
 ## Install and run
 
+From npm (needs Node 18+ and VLC):
+
+```bash
+npm install -g @anand24/termplayer
+termplayer
+```
+
+Or try it without installing: `npx @anand24/termplayer`
+
+From source:
+
 ```bash
 git clone https://github.com/anand24mishra/termplayer.git
 cd termplayer
@@ -40,7 +51,7 @@ npm install
 npm start
 ```
 
-Use `npm install -g .` inside the folder to get a global `termplayer` command. Put your music in the `songs/` folder (or pass `--songs-dir`). Radio works without any files.
+Put your music in a `songs/` folder next to where you run it (or pass `--songs-dir`). Radio works without any files.
 
 Run `npm run doctor` if something does not work. It checks VLC, your music folder, the API key and the network.
 

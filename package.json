@@ -1,5 +1,5 @@
 {
-  "name": "termplayer",
+  "name": "@anand24/termplayer",
   "version": "2.1.0",
   "description": "A keyboard-driven terminal music player with a living time-of-day UI, DJ tools and Bollywood radio, powered by VLC.",
   "keywords": [
@@ -45,5 +45,8 @@
     "commander": "^12.1.0",
     "dotenv": "^17.4.2",
     "music-metadata": "^11.15.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
