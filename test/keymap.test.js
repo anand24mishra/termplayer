@@ -73,3 +73,12 @@ test('Keymap and store state transitions', async (t) => {
 
   stop();
 });
+
+test('--no-online disables the / search even when a key is configured', () => {
+  const store = new Store();
+  handleKeypress('/', { name: '/' }, store, { jamendoClientId: 'abc', onlineEnabled: false });
+  assert.notStrictEqual(store.getState().status, 'SEARCHING');
+  assert.match(store.getState().flashMessage, /disabled/);
+  handleKeypress('/', { name: '/' }, store, { jamendoClientId: 'abc', onlineEnabled: true });
+  assert.strictEqual(store.getState().status, 'SEARCHING');
+});

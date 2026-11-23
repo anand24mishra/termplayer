@@ -1,7 +1,33 @@
 {
   "name": "termplayer",
-  "version": "2.0.0",
+  "version": "2.1.0",
+  "description": "A keyboard-driven terminal music player with a living time-of-day UI, DJ tools and Bollywood radio, powered by VLC.",
+  "keywords": [
+    "music",
+    "player",
+    "terminal",
+    "cli",
+    "tui",
+    "vlc",
+    "radio",
+    "bollywood",
+    "jamendo",
+    "dj"
+  ],
+  "license": "MIT",
+  "author": "Anand",
+  "homepage": "https://github.com/anand24mishra/termplayer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anand24mishra/termplayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anand24mishra/termplayer/issues"
+  },
   "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "termplayer": "./bin/termplayer.js"
   },
@@ -9,12 +35,15 @@
     "bin",
     "src"
   ],
+  "scripts": {
+    "start": "node bin/termplayer.js",
+    "doctor": "node bin/termplayer.js --doctor",
+    "test": "node --test",
+    "prepublishOnly": "npm test"
+  },
   "dependencies": {
-    "commander": "^15.0.0",
+    "commander": "^12.1.0",
     "dotenv": "^17.4.2",
     "music-metadata": "^11.15.0"
-  },
-  "scripts": {
-    "test": "node --test"
   }
 }

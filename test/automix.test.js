@@ -18,7 +18,6 @@ describe('Auto-Mix Queue Mode module', () => {
       status: 'PLAYING',
       currentTrack: sampleTracks[0],
       tracks: sampleTracks,
-      crossfadeDuration: 3,
       selectedIndex: 0
     };
 
@@ -33,11 +32,12 @@ describe('Auto-Mix Queue Mode module', () => {
     // False when only 1 track
     assert.strictEqual(autoMixer.shouldTransition({ time: 98, length: 100 }, { ...activeState, tracks: [sampleTracks[0]] }), false);
 
-    // False when remaining time > threshold (length 100, time 90 -> remaining 10s > 3s)
+    // False when remaining time > lead time (length 100, time 90 -> remaining 10s)
     assert.strictEqual(autoMixer.shouldTransition({ time: 90, length: 100 }, activeState), false);
 
-    // True when remaining time <= threshold (length 100, time 98 -> remaining 2s <= 3s)
-    assert.strictEqual(autoMixer.shouldTransition({ time: 98, length: 100 }, activeState), true);
+    // False while still more than 1.5s remain, true once <= 1.5s remain
+    assert.strictEqual(autoMixer.shouldTransition({ time: 98, length: 100 }, activeState), false);
+    assert.strictEqual(autoMixer.shouldTransition({ time: 98.6, length: 100 }, activeState), true);
   });
 
   it('AutoMixer prevents duplicate transitions and resets for new tracks', () => {
@@ -53,14 +53,13 @@ describe('Auto-Mix Queue Mode module', () => {
       status: 'PLAYING',
       currentTrack: sampleTracks[0],
       tracks: sampleTracks,
-      crossfadeDuration: 3,
       selectedIndex: 0
     };
 
     let transitionCalled = false;
     let nextTrackTarget = null;
 
-    const triggered = autoMixer.checkAutoMix({ time: 98, length: 100 }, state, (track, index) => {
+    const triggered = autoMixer.checkAutoMix({ time: 99, length: 100 }, state, (track, index) => {
       transitionCalled = true;
       nextTrackTarget = track;
     });
@@ -70,7 +69,7 @@ describe('Auto-Mix Queue Mode module', () => {
     assert.strictEqual(nextTrackTarget.title, 'Song B');
 
     // Immediate next tick on same track should NOT trigger again
-    const secondCall = autoMixer.checkAutoMix({ time: 99, length: 100 }, state, () => {
+    const secondCall = autoMixer.checkAutoMix({ time: 99.5, length: 100 }, state, () => {
       assert.fail('Should not trigger duplicate transition on the same track');
     });
     assert.strictEqual(secondCall, false);
@@ -83,7 +82,7 @@ describe('Auto-Mix Queue Mode module', () => {
     };
 
     let secondTrackTransitioned = false;
-    const triggeredB = autoMixer.checkAutoMix({ time: 118, length: 120 }, stateTrackB, (track, index) => {
+    const triggeredB = autoMixer.checkAutoMix({ time: 119, length: 120 }, stateTrackB, (track, index) => {
       secondTrackTransitioned = true;
       assert.strictEqual(index, 0); // Wraps around to Song A
       assert.strictEqual(track.title, 'Song A');

@@ -28,24 +28,8 @@ function onStatus(cb) {
   defaultMixer.onStatus(cb);
 }
 
-function setCrossfadeDuration(sec) {
-  defaultMixer.setCrossfadeDuration(sec);
-}
-
-function getCrossfadeDuration() {
-  return defaultMixer.getCrossfadeDuration();
-}
-
 function seek(timeInSeconds) {
   defaultMixer.seek(timeInSeconds);
-}
-
-function setRate(rate) {
-  defaultMixer.setRate(rate);
-}
-
-function getRate() {
-  return defaultMixer.getRate();
 }
 
 function applyEqualizer(enabled, bands) {
@@ -58,12 +42,8 @@ module.exports = {
   resume,
   stop,
   seek,
-  setRate,
-  getRate,
   applyEqualizer,
   setVolume,
   getVolume,
-  onStatus,
-  setCrossfadeDuration,
-  getCrossfadeDuration
+  onStatus
 };

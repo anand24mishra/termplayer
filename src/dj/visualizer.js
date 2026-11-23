@@ -61,6 +61,28 @@ function generateWaveform(time, bpm = 120, volume = 50, isPlaying = true, width 
 }
 
 /**
+ * Synthetic spectrum levels (0.04..1) per column; shared by the legacy renderer and the TUI.
+ */
+function computeBarLevels(time, bpm = 120, volume = 50, width = 38) {
+  const safeBpm = bpm > 0 ? bpm : 120;
+  const beatPeriod = 60 / safeBpm;
+  const phase = ((time % beatPeriod) + beatPeriod) % beatPeriod / beatPeriod;
+  const volNorm = Math.max(0.2, volume / 100);
+  const levels = [];
+  for (let i = 0; i < width; i++) {
+    const freq = i / Math.max(1, width - 1);
+    const kick = Math.pow(Math.cos(phase * Math.PI), 6) * Math.max(0, 1 - freq * 1.5);
+    const snarePhase = (phase + 0.5) % 1.0;
+    const snare = Math.pow(Math.cos(snarePhase * Math.PI), 8) * Math.sin(freq * Math.PI) * 0.7;
+    const hihat = Math.abs(Math.sin(time * 18 + i * 1.5)) * (freq > 0.4 ? freq : 0) * 0.45;
+    const wave = 0.25 * Math.sin(time * 6 + i * 0.45) + 0.2 * Math.cos(time * 12 - i * 0.7);
+    const raw = (0.15 + wave + 0.6 * kick + 0.4 * snare + 0.3 * hihat) * volNorm;
+    levels.push(Math.max(0.04, Math.min(1.0, raw)));
+  }
+  return levels;
+}
+
+/**
  * Multi-row colorful spectrum equalizer
  */
 function generateMultiRowSpectrum(time, bpm = 120, volume = 50, isPlaying = true, width = 38, height = 3) {
@@ -71,25 +93,9 @@ function generateMultiRowSpectrum(time, bpm = 120, volume = 50, isPlaying = true
   }
 
   const safeBpm = bpm > 0 ? bpm : 120;
-  const beatPeriod = 60 / safeBpm;
-  const phase = ((time % beatPeriod) + beatPeriod) % beatPeriod / beatPeriod;
-  const volNorm = Math.max(0.2, volume / 100);
 
-  const barUnits = [];
   const maxUnits = height * 8;
-
-  for (let i = 0; i < width; i++) {
-    const freq = i / Math.max(1, width - 1);
-    const kick = Math.pow(Math.cos(phase * Math.PI), 6) * Math.max(0, 1 - freq * 1.5);
-    const snarePhase = (phase + 0.5) % 1.0;
-    const snare = Math.pow(Math.cos(snarePhase * Math.PI), 8) * Math.sin(freq * Math.PI) * 0.7;
-    const hihat = Math.abs(Math.sin(time * 18 + i * 1.5)) * (freq > 0.4 ? freq : 0) * 0.45;
-    const wave = 0.25 * Math.sin(time * 6 + i * 0.45) + 0.2 * Math.cos(time * 12 - i * 0.7);
-
-    let raw = (0.15 + wave + 0.6 * kick + 0.4 * snare + 0.3 * hihat) * volNorm;
-    raw = Math.max(0.04, Math.min(1.0, raw));
-    barUnits.push(Math.round(raw * maxUnits));
-  }
+  const barUnits = computeBarLevels(time, safeBpm, volume, width).map((raw) => Math.round(raw * maxUnits));
 
   const rows = [];
   for (let r = 0; r < height; r++) {
@@ -150,12 +156,10 @@ function generateMultiRowWaveform(time, bpm = 120, volume = 50, isPlaying = true
 /**
  * Renders a bold, colorful 3-line framed BPM box for the right side
  */
-function renderBpmBox(bpm, rate = 1.0, isPlaying = true) {
+function renderBpmBox(bpm, isPlaying = true) {
   const bpmNum = (bpm && bpm > 0) ? `${bpm} BPM` : '--- BPM';
   const icon = isPlaying ? '⚡' : '❚❚';
-  const ratePct = Math.round(rate * 100);
-  const rateStr = ratePct !== 100 ? `${ratePct > 100 ? '+' : ''}${ratePct - 100}%` : '';
-  const text = rateStr ? `${icon} ${bpmNum} ${rateStr}` : `${icon} ${bpmNum}`;
+  const text = `${icon} ${bpmNum}`;
 
   // Pad text to 14 chars
   const padTotal = 14 - text.length;
@@ -182,7 +186,6 @@ function renderVisualizer(state, width = 30) {
   const time = (state.progress && state.progress.time) ? state.progress.time : 0;
   const bpm = (state.currentTrack && state.currentTrack.bpm) ? state.currentTrack.bpm : 120;
   const volume = state.volume !== undefined ? state.volume : 50;
-  const rate = state.playbackRate !== undefined ? state.playbackRate : 1.0;
 
   // Adapt width based on terminal width if possible
   const termCols = (process.stdout && process.stdout.columns) ? process.stdout.columns : 80;
@@ -194,7 +197,7 @@ function renderVisualizer(state, width = 30) {
     ? generateMultiRowWaveform(time, bpm, volume, isPlaying, targetEqWidth, 3)
     : generateMultiRowSpectrum(time, bpm, volume, isPlaying, targetEqWidth, 3);
 
-  const bpmRows = renderBpmBox(bpm, rate, isPlaying);
+  const bpmRows = renderBpmBox(bpm, isPlaying);
 
   const combinedLines = [];
   for (let r = 0; r < 3; r++) {
@@ -205,6 +208,7 @@ function renderVisualizer(state, width = 30) {
 }
 
 module.exports = {
+  computeBarLevels,
   renderVisualizer,
   renderBpmBox,
   generateSpectrum,

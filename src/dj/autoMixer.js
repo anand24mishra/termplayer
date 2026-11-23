@@ -1,7 +1,9 @@
 /**
- * AutoMixer - Handles automatic crossfading and playlist progression
- * when nearing the end of the current track.
+ * AutoMixer - Handles automatic playlist progression when the current track is about to end.
  */
+
+// Playback status is polled every second, so advance when <= 1.5s remain (at most ~1.5s is clipped).
+const AUTO_MIX_LEAD_SECONDS = 1.5;
 
 class AutoMixer {
   constructor() {
@@ -27,11 +29,9 @@ class AutoMixer {
 
     if (this.triggeredForTrack === trackId) return false;
 
-    const xfade = (typeof state.crossfadeDuration === 'number') ? state.crossfadeDuration : 3;
-    const threshold = Math.max(xfade, 2);
     const remaining = status.length - status.time;
 
-    return remaining <= threshold && status.time > 0;
+    return remaining <= AUTO_MIX_LEAD_SECONDS && status.time > 0;
   }
 
   /**

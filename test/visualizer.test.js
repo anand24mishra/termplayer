@@ -43,16 +43,13 @@ test('Live Waveform / Spectrum Visualizer module', async (t) => {
   });
 
   await t.test('renderBpmBox renders 3-line framed box with BPM number and icon', () => {
-    const bpmBox = renderBpmBox(161, 1.0, true);
+    const bpmBox = renderBpmBox(161, true);
     assert.strictEqual(bpmBox.length, 3);
     assert.ok(bpmBox[0].includes('╭────────────────╮'));
     assert.ok(bpmBox[1].includes('161 BPM'));
     assert.ok(bpmBox[1].includes('⚡'));
     assert.ok(bpmBox[2].includes('╰────────────────╯'));
 
-    // Displays rate difference if not 1.0x
-    const rateBpmBox = renderBpmBox(120, 1.1, true);
-    assert.ok(rateBpmBox[1].includes('+10%'));
   });
 
   await t.test('renderVisualizer supports modes: bars, waveform, and off', () => {
@@ -60,7 +57,6 @@ test('Live Waveform / Spectrum Visualizer module', async (t) => {
       status: 'PLAYING',
       progress: { time: 5, length: 180 },
       volume: 60,
-      playbackRate: 1.0,
       visualizerMode: 'bars',
       currentTrack: { bpm: 161 }
     };

@@ -1,13 +1,16 @@
+const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { loadOrBuildIndex } = require('./library/libraryIndex');
 const { log } = require('./utils/logger');
 const loadConfig = require('./config');
 const { Store } = require('./state/store');
+const { reconcileStatus } = require('./playback/reconcile');
 const { handleKeypress } = require('./ui/keymap');
-const { render } = require('./ui/render');
+const { render, startUI, stopUI } = require('./ui/render');
 
 function cleanup() {
+  try { stopUI(); } catch (e) {}
   try {
     const { stop } = require('./playback/vlcController');
     stop();
@@ -41,23 +44,40 @@ module.exports = async function start(cliOptions) {
   const songsDir = path.resolve(config.songsDir);
   const cacheTracksDir = path.resolve(config.cacheDir);
 
+  if (cliOptions && cliOptions.clearCache) {
+    fs.rmSync(path.resolve('.cache'), { recursive: true, force: true });
+  }
+
   const store = new Store();
 
   try {
     const tracks = await loadOrBuildIndex(songsDir, cacheTracksDir);
     log(`Loaded ${tracks.length} tracks into library index.`);
     store.state.tracks = tracks;
+    store.dispatch({ type: 'SET_THEME', payload: ['auto', 'dawn', 'day', 'golden', 'dusk', 'night'].includes(config.theme) ? config.theme : 'auto' });
 
     const { onStatus } = require('./playback/vlcController');
     onStatus((status) => {
       store.dispatch({ type: 'UPDATE_PROGRESS', payload: { time: status.time, length: status.length } });
-      const currentStatus = store.getState().status;
-      if (status.state === 'playing' && currentStatus !== 'PLAYING' && currentStatus !== 'SEARCHING') {
-        store.dispatch({ type: 'PLAYBACK_STARTED' });
-      } else if (status.state === 'paused' && currentStatus !== 'PAUSED' && currentStatus !== 'SEARCHING') {
-        store.dispatch({ type: 'PAUSE_TRACK' });
-      } else if (status.state === 'stopped' && currentStatus !== 'IDLE' && currentStatus !== 'SEARCHING') {
-        store.dispatch({ type: 'STOP_TRACK' });
+      const cur = store.getState();
+      const action = reconcileStatus({
+        vlcState: status.state,
+        status: cur.status,
+        previousStatus: cur.previousStatus,
+        pauseIntent: cur.pauseIntent,
+        transportAgeMs: Date.now() - (cur.transportAt || 0),
+      });
+      if (action === 'FORCE_PAUSE') {
+        require('./playback/vlcController').pause(); // user paused: do not let it play on by itself
+      } else if (action) {
+        store.dispatch({ type: action });
+      }
+
+      // Live radio: surface the song currently on air (ICY metadata) and toast when it changes
+      const live = store.getState();
+      if (live.currentTrack && live.currentTrack.isLive && status.nowPlaying && status.nowPlaying !== live.streamTitle) {
+        store.dispatch({ type: 'UPDATE_STREAM_TITLE', payload: status.nowPlaying });
+        store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `On air: ${status.nowPlaying}` });
       }
 
       const { defaultCueController } = require('./dj/cueController');
@@ -96,7 +116,8 @@ module.exports = async function start(cliOptions) {
       }
     });
 
-    // Initial render
+    // Start the full-screen UI
+    startUI(store, { animate: config.animate });
     render(store.getState());
 
   } catch (err) {

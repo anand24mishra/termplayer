@@ -1,11 +1,50 @@
 const { searchTracks } = require('../library/onlineProvider');
 const { detectBpm } = require('../dj/bpmDetector');
 const { defaultCueController } = require('../dj/cueController');
+const path = require('path');
+const { fetchBollywoodStations, filterStations, availableGenres, registerClick } = require('../library/radioProvider');
+const { pickRandomIndex } = require('../library/suggest');
 
 let abortController = null;
+let radioAbort = null;
+
+const LIVE_ONLY_MSG = 'Not available on live radio';
+
+function isLiveNow(state) {
+  return !!(state.currentTrack && state.currentTrack.isLive && ['PLAYING', 'PAUSED', 'LOADING'].includes(state.status));
+}
+
+// Shared "play this track now" path used by Enter, random pick and radio.
+function startPlayback(track, store) {
+  const { play } = require('../playback/vlcController');
+  defaultCueController.reset();
+  store.dispatch({ type: 'PLAY_TRACK', payload: track });
+  startBpmDetection(track, store);
+  play(track.filePath || track.streamUrl);
+}
+
+function loadRadio(store, config, force = false) {
+  if (radioAbort) radioAbort.abort();
+  radioAbort = new AbortController();
+  store.dispatch({ type: 'RADIO_LOADING' });
+  const cachePath = config.cacheDir ? path.resolve(config.cacheDir, '..', 'radio-stations.json') : undefined;
+  const { render } = require('./render');
+  return fetchBollywoodStations({ signal: radioAbort.signal, cachePath, fetchImpl: config.fetchImpl, force })
+    .then((stations) => store.dispatch({ type: 'RADIO_LOADED', payload: stations }))
+    .catch((err) => {
+      if (err.name !== 'AbortError') store.dispatch({ type: 'RADIO_ERROR', payload: err.message });
+    })
+    .then(() => render(store.getState()));
+}
+
+function tuneIn(station, store) {
+  startPlayback(station, store);
+  registerClick(station.stationuuid);
+  store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `Tuned in: ${station.title}` });
+}
 
 function startBpmDetection(track, store) {
-  if (!track) return;
+  if (!track || track.isLive) return; // an endless stream cannot be analysed
   detectBpm(track)
     .then(bpm => {
       if (bpm) {
@@ -32,6 +71,41 @@ function handleKeypress(str, key, store, config) {
       process.stdin.setRawMode(false);
     }
     process.exit(0);
+  }
+
+  // Any key dismisses the help overlay
+  if (state.showHelp) {
+    store.dispatch({ type: 'HIDE_HELP' });
+    return;
+  }
+
+  if (state.status === 'RADIO') {
+    const radio = state.radio;
+    const list = filterStations(radio.stations, radio.genre, radio.filter);
+    const genres = availableGenres(radio.stations);
+    if (key && key.name === 'escape') {
+      if (radioAbort) radioAbort.abort();
+      store.dispatch({ type: 'CLOSE_RADIO' });
+    } else if (key && key.name === 'up') {
+      store.dispatch({ type: 'RADIO_MOVE', payload: -1 });
+    } else if (key && key.name === 'down') {
+      store.dispatch({ type: 'RADIO_MOVE', payload: 1 });
+    } else if (key && (key.name === 'left' || key.name === 'right')) {
+      const i = Math.max(0, genres.indexOf(radio.genre));
+      const next = genres[(i + (key.name === 'right' ? 1 : genres.length - 1)) % genres.length];
+      store.dispatch({ type: 'RADIO_SET_GENRE', payload: next });
+    } else if (key && (key.name === 'return' || key.name === 'enter')) {
+      const station = list[radio.selected || 0];
+      if (station) tuneIn(station, store);
+    } else if (key && key.name === 'tab') {
+      const idx = pickRandomIndex(list, state.currentTrack);
+      if (idx >= 0) tuneIn(list[idx], store);
+    } else if (key && key.name === 'backspace') {
+      store.dispatch({ type: 'RADIO_SET_FILTER', payload: radio.filter.slice(0, -1) });
+    } else if (str && str.length === 1 && str >= ' ') {
+      store.dispatch({ type: 'RADIO_SET_FILTER', payload: radio.filter + str });
+    }
+    return;
   }
 
   if (state.status === 'SEARCHING') {
@@ -84,11 +158,47 @@ function handleKeypress(str, key, store, config) {
   }
 
   if (str === '/' || (key && key.name === '/')) {
-    if (config.jamendoClientId) {
+    if (config.jamendoClientId && config.onlineEnabled !== false) {
       store.dispatch({ type: 'START_SEARCH' });
     } else {
-      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: 'Set JAMENDO_CLIENT_ID to enable online search — see README.md' });
+      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: config.onlineEnabled === false ? 'Online search is disabled (--no-online)' : 'Set JAMENDO_CLIENT_ID to enable online search — see README.md' });
     }
+    return;
+  }
+
+  if (str === '?') {
+    store.dispatch({ type: 'TOGGLE_HELP' });
+    return;
+  }
+
+  // Bollywood radio browser [b]
+  if (str === 'b' || str === 'B') {
+    store.dispatch({ type: 'OPEN_RADIO' });
+    if (store.getState().radio.stations.length === 0) loadRadio(store, config);
+    return;
+  }
+
+  // Random pick [n]: "surprise me" from the local library
+  if (str === 'n' || str === 'N') {
+    const tracks = state.tracks || [];
+    const idx = pickRandomIndex(tracks, state.currentTrack);
+    if (idx < 0) {
+      store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: 'No tracks to pick from — press b for Bollywood radio' });
+      return;
+    }
+    const pick = tracks[idx];
+    store.dispatch({ type: 'SELECT_TRACK', payload: idx });
+    startPlayback(pick, store);
+    store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: `Random pick: ${pick.title || pick.filename}${pick.artist ? ' — ' + pick.artist : ''}` });
+    return;
+  }
+
+  // Theme cycle [t]: auto -> dawn -> day -> golden -> dusk -> night
+  if (str === 't' || str === 'T') {
+    const { nextTheme } = require('./theme/timeOfDay');
+    const next = nextTheme(state.themeOverride || 'auto');
+    store.dispatch({ type: 'SET_THEME', payload: next });
+    store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: next === 'auto' ? 'Theme: Auto (follows the clock)' : `Theme: ${next[0].toUpperCase()}${next.slice(1)}` });
     return;
   }
 
@@ -105,20 +215,14 @@ function handleKeypress(str, key, store, config) {
   // Playback Controls
   if (key && (key.name === 'return' || key.name === 'enter')) {
     const selectedTrack = state.tracks[state.selectedIndex || 0];
-    if (selectedTrack) {
-      defaultCueController.reset();
-      store.dispatch({ type: 'PLAY_TRACK', payload: selectedTrack });
-      startBpmDetection(selectedTrack, store);
-      const { play } = require('../playback/vlcController');
-      play(selectedTrack.filePath || selectedTrack.streamUrl);
-    }
+    if (selectedTrack) startPlayback(selectedTrack, store);
     return;
   }
   
   if (key && key.name === 'space') {
     const { pause, resume } = require('../playback/vlcController');
     if (state.status === 'PLAYING' || state.status === 'LOADING') {
-      store.dispatch({ type: 'PAUSE_TRACK' });
+      store.dispatch({ type: 'PAUSE_TRACK', user: true });
       pause();
     } else if (state.status === 'PAUSED') {
       store.dispatch({ type: 'RESUME_TRACK' });
@@ -151,21 +255,10 @@ function handleKeypress(str, key, store, config) {
     return;
   }
 
-  // Crossfade toggle key
-  if (str === 'c' || str === 'C') {
-    const durations = [0, 2, 3, 5];
-    const current = state.crossfadeDuration !== undefined ? state.crossfadeDuration : 3;
-    const currentIdx = durations.indexOf(current);
-    const nextIdx = (currentIdx + 1) % durations.length;
-    const nextDuration = durations[nextIdx >= 0 ? nextIdx : 0];
-
-    store.dispatch({ type: 'SET_CROSSFADE', payload: nextDuration });
-    const { setCrossfadeDuration } = require('../playback/vlcController');
-    setCrossfadeDuration(nextDuration);
-    store.dispatch({
-      type: 'SET_FLASH_MESSAGE',
-      payload: nextDuration > 0 ? `Crossfade set to ${nextDuration}s` : 'Crossfade: OFF'
-    });
+  // Cues and loops need a seekable timeline, which live radio does not have
+  const cueKeys = ['1', '2', '3', '4', '!', '@', '#', '$', 'l', 'L'];
+  if (str && cueKeys.includes(str) && isLiveNow(state)) {
+    store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: LIVE_ONLY_MSG });
     return;
   }
 
@@ -204,32 +297,6 @@ function handleKeypress(str, key, store, config) {
     } else {
       store.dispatch({ type: 'SET_FLASH_MESSAGE', payload: 'Loop: OFF' });
     }
-    return;
-  }
-
-  // Tempo / Speed nudge keys (< or , for -5%, > or . for +5%, r or 0 to reset)
-  if (str === '<' || str === ',' || str === '>' || str === '.' || str === 'r' || str === 'R' || str === '0') {
-    const currentRate = state.playbackRate !== undefined ? state.playbackRate : 1.0;
-    let newRate = currentRate;
-    if (str === '<' || str === ',') {
-      newRate = Math.max(0.70, Math.round((currentRate - 0.05) * 100) / 100);
-    } else if (str === '>' || str === '.') {
-      newRate = Math.min(1.30, Math.round((currentRate + 0.05) * 100) / 100);
-    } else if (str === 'r' || str === 'R' || str === '0') {
-      newRate = 1.0;
-    }
-
-    store.dispatch({ type: 'SET_RATE', payload: newRate });
-    const { setRate } = require('../playback/vlcController');
-    setRate(newRate);
-
-    const pct = Math.round(newRate * 100);
-    const diff = pct - 100;
-    const diffStr = diff > 0 ? ` (+${diff}%)` : diff < 0 ? ` (${diff}%)` : ' (Normal)';
-    store.dispatch({
-      type: 'SET_FLASH_MESSAGE',
-      payload: `Tempo: ${pct}%${diffStr}`
-    });
     return;
   }
 
