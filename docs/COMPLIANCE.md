@@ -27,6 +27,28 @@ remain `false` by default in `config.js`, per `tasks.md` T0.0 / T3.1.**
 
 ---
 
+## Radio Browser (Bollywood / Hindi radio)
+
+**Status: PENDING REVIEW**
+
+- API terms reviewed: _not yet_ — directory: https://www.radio-browser.info/ (community-run, free, no API
+  key; asks clients to send a descriptive `User-Agent` and to call `/json/url/<uuid>` when a station is
+  played, both of which TermPlayer does).
+- Streaming playback permitted: _pending_ — TermPlayer only plays each station's own public stream URL
+  through VLC; it does not re-host, record or transform the audio. Each station is responsible for its own
+  broadcast rights.
+- Local persistence permitted: **not applicable** — radio is never downloaded or cached to disk (live
+  streams have no `audiodownload`, so `trackCache.downloadTrack` returns null). Only the station *list*
+  (names, URLs, bitrates) is cached in `.cache/radio-stations.json` for 24 h.
+- Attribution required: _pending_
+- Per-track/catalog license allow-list: _not applicable_ (no per-track licences; live broadcasts)
+
+**Considered and rejected:** unofficial JioSaavn / Gaana wrappers. JioSaavn's API policy
+(https://www.jiosaavn.com/corporate/api-policy) states its APIs are private and not open to the public,
+whether documented or not.
+
+---
+
 ## Adding a new provider
 
 Copy the template below for any additional online provider (see `PRD.md §9` roadmap). Compliance
